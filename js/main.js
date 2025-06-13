@@ -1,6 +1,6 @@
 import { initializeDatabase } from './db.js';
 import { executeQuery } from './query.js';
-import { csvFileSources } from './csvSources.js'; // Import the centrally defined CSV URLs
+import { fileSources } from './csvSources.js'; // Import the updated sources
 
 const executeButton = document.getElementById('execute-button');
 
@@ -11,8 +11,8 @@ if (executeButton) {
     console.error("Execute button not found.");
 }
 
-// Initialize the database with the imported array of CSV URLs and then execute an initial query.
-initializeDatabase(csvFileSources)
+// Initialize the database with the imported array of sources and then execute an initial query.
+initializeDatabase(fileSources) // Use the updated fileSources
     .then(() => {
         // Database is initialized (or attempted to initialize with data from URLs), and db instance in db.js is set.
         // executeQuery (imported from query.js) will use that db instance.

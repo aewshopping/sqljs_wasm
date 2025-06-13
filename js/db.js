@@ -1,3 +1,4 @@
+import { parseTSV } from './tsvParser.js';
 import { parseCSV } from './csvParser.js';
 import { updateStatus } from './ui/statusUpdater.js';
 
@@ -19,28 +20,21 @@ function createTable(dbInstance, headers) {
  * @async
  * @param {SQL.Database} dbInstance - The initialized SQL.js database instance.
  * @param {string[]} headers - Array of header strings for table columns (used for validation).
- * @param {string[]} dataRows - Array of data row strings (CSV lines).
+ * @param {string[][]} dataRows - Array of data row arrays (pre-parsed values).
  */
 async function insertData(dbInstance, headers, dataRows) {
-    // Prepare an SQL INSERT statement.
     const placeholders = headers.map(() => '?').join(', ');
     const insertSql = `INSERT INTO csv_data VALUES (${placeholders});`;
     const stmt = dbInstance.prepare(insertSql);
 
-    // Start a transaction for faster bulk inserts.
     dbInstance.run('BEGIN TRANSACTION;');
     try {
-        dataRows.forEach(line => {
-            // Assuming parseCSV already split lines, but if dataRows are full lines, split here.
-            // For this refactor, let's assume dataRows are arrays of values, matching parseCSV's output style if it were to return rows as arrays of values.
-            // However, the original `createTableAndInsertData` expected `dataRows` as an array of strings (lines).
-            // And `parseCSV` returns `dataRows` as an array of strings (lines).
-            // So, the splitting logic is still needed here.
-            const values = line.split(',').map(v => v.trim());
-            if (values.length === headers.length) {
-                stmt.run(values);
+        dataRows.forEach(row => { // dataRows is now string[][]
+            if (row.length === headers.length) {
+                stmt.run(row); // Use the row directly
             } else {
-                console.warn('Skipping malformed row (header/value count mismatch):', line);
+                // console.warn still useful but the 'line' variable is now 'row' (an array)
+                console.warn('Skipping malformed row (header/value count mismatch):', row.join(','));
             }
         });
         dbInstance.run('COMMIT;');
@@ -56,12 +50,12 @@ async function insertData(dbInstance, headers, dataRows) {
 }
 
 /**
- * Initializes the SQL.js database and loads data from external CSVs.
+ * Initializes the SQL.js database and loads data from external sources.
  * @async
- * @param {string[]} csvUrls - Array of URLs to fetch CSV data from.
+ * @param {{url: string, type: 'csv' | 'tsv'}[]} sources - Array of source objects, each specifying a URL and file type.
  * @returns {Promise<SQL.Database>} The initialized SQL.js database instance.
  */
-async function initializeDatabase(csvUrls) {
+async function initializeDatabase(sources) { // Parameter changed
     try {
         const SQL = await initSqlJs({
             locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
@@ -69,51 +63,61 @@ async function initializeDatabase(csvUrls) {
         db = new SQL.Database();
         updateStatus('SQL.js initialized.');
 
-        let tableHeaders = null; // Initialize tableHeaders
+        let tableHeaders = null;
 
-        for (const url of csvUrls) {
+        for (const source of sources) { // Loop through sources array
             try {
-                updateStatus(`Fetching CSV data from ${url}...`, false, true);
-                const response = await fetch(url);
+                updateStatus(`Fetching data from ${source.url} (type: ${source.type})...`, false, true);
+                const response = await fetch(source.url);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const csvText = await response.text();
-                // console.log(csvText); // Log fetched CSV text - can be removed or kept for debugging
-                updateStatus(`CSV data fetched successfully from ${url}.`, false, true);
+                const textData = await response.text();
+                updateStatus(`Data fetched successfully from ${source.url}.`, false, true);
 
-                const { headers: currentHeaders, dataRows } = parseCSV(csvText);
+                let parsedData;
+                if (source.type === 'csv') {
+                    parsedData = parseCSV(textData);
+                } else if (source.type === 'tsv') {
+                    parsedData = parseTSV(textData);
+                } else {
+                    console.warn(`Unsupported file type: ${source.type} for URL ${source.url}. Skipping.`);
+                    updateStatus(`Unsupported file type: ${source.type} for ${source.url}. Skipping.`, true);
+                    continue;
+                }
+
+                const { headers: currentHeaders, dataRows } = parsedData;
 
                 if (dataRows.length === 0) {
-                    updateStatus(`No data rows found in CSV from ${url}. Skipping.`, false, true);
-                    continue; // Skip to the next URL if no data rows
+                    updateStatus(`No data rows found in ${source.type.toUpperCase()} from ${source.url}. Skipping.`, false, true);
+                    continue;
                 }
 
                 if (tableHeaders === null) {
                     tableHeaders = currentHeaders;
-                    await createTable(db, tableHeaders); // Create table with the headers from the first valid CSV
-                    await insertData(db, tableHeaders, dataRows); // Insert data from the first valid CSV
-                    updateStatus(`Data from ${url} loaded.`, false, true);
+                    // createTable function does not need delimiter parameter
+                    await createTable(db, tableHeaders);
+                    // insertData now expects dataRows as string[][]
+                    await insertData(db, tableHeaders, dataRows);
+                    updateStatus(`Data from ${source.url} loaded.`, false, true);
                 } else {
                     if (JSON.stringify(currentHeaders) === JSON.stringify(tableHeaders)) {
-                        await insertData(db, tableHeaders, dataRows); // Insert data if headers match
-                        updateStatus(`Data from ${url} loaded.`, false, true);
+                        // insertData now expects dataRows as string[][]
+                        await insertData(db, tableHeaders, dataRows);
+                        updateStatus(`Data from ${source.url} loaded.`, false, true);
                     } else {
-                        console.warn(`Skipping CSV with non-matching headers: ${url}. Expected ${JSON.stringify(tableHeaders)}, got ${JSON.stringify(currentHeaders)}`);
-                        updateStatus(`Skipping CSV from ${url} due to non-matching headers.`, true);
+                        console.warn(`Skipping ${source.type.toUpperCase()} with non-matching headers: ${source.url}. Expected ${JSON.stringify(tableHeaders)}, got ${JSON.stringify(currentHeaders)}`);
+                        updateStatus(`Skipping ${source.type.toUpperCase()} from ${source.url} due to non-matching headers.`, true);
                     }
                 }
 
             } catch (fetchError) {
-                // Catch errors from fetch, parseCSV, createTable, or insertData
-                console.error(`Error processing CSV from ${url}: `, fetchError);
-                updateStatus(`Failed to process CSV data from ${url}: ${fetchError.message}`, true);
-                // Decide if one failed fetch should stop the whole process or continue with other URLs
-                // For now, we'll let it continue with other URLs.
+                console.error(`Error processing ${source.type.toUpperCase()} from ${source.url}: `, fetchError);
+                updateStatus(`Failed to process ${source.type.toUpperCase()} data from ${source.url}: ${fetchError.message}`, true);
             }
         }
 
-        updateStatus('All CSV processing finished. Database ready for queries!', false, true);
+        updateStatus('All data processing finished. Database ready for queries!', false, true);
         return db;
 
     } catch (error) {
@@ -125,5 +129,6 @@ async function initializeDatabase(csvUrls) {
     }
 }
 
-export { initializeDatabase, createTable, insertData }; // Export new functions
+// Exports remain the same:
+export { initializeDatabase, createTable, insertData };
 export { db };
