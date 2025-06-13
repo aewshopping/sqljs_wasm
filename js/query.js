@@ -1,5 +1,5 @@
 import { db } from './db.js'; // Imports the live binding of the db instance
-import { displayResults, displayQueryError, clearResults } from './uiUpdater.js';
+import { displayResults, displayQueryError, clearResults } from './ui/resultsDisplay.js';
 
 /**
  * Executes the SQL query from the input field and displays results.

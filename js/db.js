@@ -1,5 +1,5 @@
 import { parseCSV } from './csvParser.js';
-import { updateStatus } from './uiUpdater.js';
+import { updateStatus } from './ui/statusUpdater.js';
 
 let db = null;
 
