@@ -1,30 +1,56 @@
 import { parseTSV } from './tsvParser.js';
 import { parseCSV } from './csvParser.js';
 import { updateStatus } from './ui/statusUpdater.js';
+import { addTableToList, clearTableList } from './ui/tableListDisplay.js';
 
 let db = null;
 
 /**
- * Creates a table in the database.
- * @param {SQL.Database} dbInstance - The initialized SQL.js database instance.
- * @param {string[]} headers - Array of header strings for table columns.
+ * Generates a sanitized table name from a URL.
+ * @param {string} url - The URL to generate a table name from.
+ * @returns {string} The sanitized table name.
  */
-function createTable(dbInstance, headers) {
-    const createTableSql = `CREATE TABLE csv_data (${headers.map(h => `"${h}" TEXT`).join(', ')});`;
-    dbInstance.run(createTableSql);
-    updateStatus(`Table "csv_data" created with headers: ${headers.join(', ')}.`, false, true);
+function generateTableNameFromUrl(url) {
+    // Extract filename from URL
+    let filename = url.substring(url.lastIndexOf('/') + 1);
+
+    // Remove file extension
+    filename = filename.replace(/\.[^/.]+$/, "");
+
+    // Replace non-alphanumeric characters (except underscores) with underscores
+    filename = filename.replace(/[^a-zA-Z0-9_]/g, '_');
+
+    // Ensure the name starts with a letter or underscore
+    if (/^[0-9]/.test(filename)) {
+        filename = "table_" + filename;
+    }
+
+    return filename;
 }
 
 /**
- * Inserts data rows into the "csv_data" table.
+ * Creates a table in the database.
+ * @param {SQL.Database} dbInstance - The initialized SQL.js database instance.
+ * @param {string} tableName - The name of the table to create.
+ * @param {string[]} headers - Array of header strings for table columns.
+ */
+function createTable(dbInstance, tableName, headers) {
+    const createTableSql = `CREATE TABLE "${tableName}" (${headers.map(h => `"${h}" TEXT`).join(', ')});`;
+    dbInstance.run(createTableSql);
+    updateStatus(`Table "${tableName}" created with headers: ${headers.join(', ')}.`, false, true);
+}
+
+/**
+ * Inserts data rows into the specified table.
  * @async
  * @param {SQL.Database} dbInstance - The initialized SQL.js database instance.
+ * @param {string} tableName - The name of the table to insert data into.
  * @param {string[]} headers - Array of header strings for table columns (used for validation).
  * @param {string[][]} dataRows - Array of data row arrays (pre-parsed values).
  */
-async function insertData(dbInstance, headers, dataRows) {
+async function insertData(dbInstance, tableName, headers, dataRows) {
     const placeholders = headers.map(() => '?').join(', ');
-    const insertSql = `INSERT INTO csv_data VALUES (${placeholders});`;
+    const insertSql = `INSERT INTO "${tableName}" VALUES (${placeholders});`;
     const stmt = dbInstance.prepare(insertSql);
 
     dbInstance.run('BEGIN TRANSACTION;');
@@ -38,7 +64,7 @@ async function insertData(dbInstance, headers, dataRows) {
             }
         });
         dbInstance.run('COMMIT;');
-        updateStatus(`Inserted ${dataRows.length} rows into "csv_data".`, false, true);
+        updateStatus(`Inserted ${dataRows.length} rows into "${tableName}".`, false, true);
     } catch (transactionError) {
         dbInstance.run('ROLLBACK;');
         console.error("Transaction error during data insertion:", transactionError);
@@ -63,7 +89,7 @@ async function initializeDatabase(sources) { // Parameter changed
         db = new SQL.Database();
         updateStatus('SQL.js initialized.');
 
-        let tableHeaders = null;
+        clearTableList(); // Clear the list before loading new data
 
         for (const source of sources) { // Loop through sources array
             try {
@@ -89,27 +115,15 @@ async function initializeDatabase(sources) { // Parameter changed
                 const { headers: currentHeaders, dataRows } = parsedData;
 
                 if (dataRows.length === 0) {
-                    updateStatus(`No data rows found in ${source.type.toUpperCase()} from ${source.url}. Skipping.`, false, true);
+                    updateStatus(`No data rows found in ${source.type.toUpperCase()} from ${source.url}. Skipping table creation.`, false, true);
                     continue;
                 }
 
-                if (tableHeaders === null) {
-                    tableHeaders = currentHeaders;
-                    // createTable function does not need delimiter parameter
-                    await createTable(db, tableHeaders);
-                    // insertData now expects dataRows as string[][]
-                    await insertData(db, tableHeaders, dataRows);
-                    updateStatus(`Data from ${source.url} loaded.`, false, true);
-                } else {
-                    if (JSON.stringify(currentHeaders) === JSON.stringify(tableHeaders)) {
-                        // insertData now expects dataRows as string[][]
-                        await insertData(db, tableHeaders, dataRows);
-                        updateStatus(`Data from ${source.url} loaded.`, false, true);
-                    } else {
-                        console.warn(`Skipping ${source.type.toUpperCase()} with non-matching headers: ${source.url}. Expected ${JSON.stringify(tableHeaders)}, got ${JSON.stringify(currentHeaders)}`);
-                        updateStatus(`Skipping ${source.type.toUpperCase()} from ${source.url} due to non-matching headers.`, true);
-                    }
-                }
+                const tableName = generateTableNameFromUrl(source.url);
+                await createTable(db, tableName, currentHeaders);
+                await insertData(db, tableName, currentHeaders, dataRows);
+                addTableToList(tableName); // Add table name to UI list
+                updateStatus(`Data from ${source.url} loaded into table "${tableName}".`, false, true);
 
             } catch (fetchError) {
                 console.error(`Error processing ${source.type.toUpperCase()} from ${source.url}: `, fetchError);
@@ -130,5 +144,5 @@ async function initializeDatabase(sources) { // Parameter changed
 }
 
 // Exports remain the same:
-export { initializeDatabase, createTable, insertData };
+export { initializeDatabase, createTable, insertData, generateTableNameFromUrl };
 export { db };
