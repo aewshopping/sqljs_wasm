@@ -1,6 +1,9 @@
 const fileSources = [
-    { url: './js/sample_users.csv', type: 'csv' },
-    { url: './js/sample_orders.tsv', type: 'tsv' }
+    { url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/books-tags.csv', type: 'csv' },
+    { url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/cats.csv', type: 'csv' },
+    { url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/popular-history-books.csv', type: 'csv' },
+    { url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/tags.csv', type: 'csv' },
+    { url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_tsv/quotes.tsv', type: 'tsv' }
 ];
 
 export { fileSources };
