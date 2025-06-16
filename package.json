@@ -2,6 +2,7 @@
   "devDependencies": {
     "jest": "^30.0.0"
   },
+  "type": "module",
   "name": "sqljs_wasm",
   "version": "1.0.0",
   "description": "This project is a web application that loads CSV data into an in-browser SQL database (SQL.js) and allows users to query it.",

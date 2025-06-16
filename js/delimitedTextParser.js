@@ -7,9 +7,9 @@
 function _parseDelimitedText(text, delimiter) {
     const trimmedText = text.trim();
 
-    // Requirement 1: If text.trim() is empty, return { headers: [''], dataRows: [] }
+    // Requirement 1: If text.trim() is empty, return { headers: [], dataRows: [] }
     if (trimmedText === '') {
-        return { headers: [''], dataRows: [] };
+        return { headers: [], dataRows: [] };
     }
 
     const lines = trimmedText.split('\n');
