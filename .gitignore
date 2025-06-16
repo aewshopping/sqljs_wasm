@@ -1,0 +1,28 @@
+# Ignore Node.js dependencies
+node_modules/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE/editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build outputs
+dist/
+build/
+out/
+
+# Log files
+*.log
+
+# Coverage reports
+coverage/
+.nyc_output/
