@@ -1,6 +1,7 @@
 // Node.js test script for initializeDatabase in db.js
 
-import { initializeDatabase, generateTableNameFromUrl } from '../js/db.js';
+import { initializeDataSources as initializeDatabase } from '../js/dataOrchestrator.js';
+import { generateTableNameFromUrl } from '../js/database/sqliteService.js';
 import { fileSources } from '../js/csvSources.js'; // Assuming csvSources.js is in js/
 // Attempting direct import of the sql-wasm.js file due to persistent ERR_MODULE_NOT_FOUND with 'sql.js'
 import originalInitSqlJs from 'sql.js/dist/sql-wasm.js';
@@ -48,6 +49,11 @@ const mockUiFunction = (message, isError, isProgress) => {
 // So, global mocks for these are not needed and wouldn't be used by db.js.
 // We rely on those files existing and exporting the functions.
 
+// --- Dummy Progress Callback ---
+const dummyProgressCallback = (update) => {
+    // console.log(`Test Progress: type=${update.type}, msg=${update.message}, table=${update.tableName}`);
+};
+
 // --- Main Test Logic ---
 async function runTest() {
     console.log('Starting Node.js test for initializeDatabase...');
@@ -80,7 +86,8 @@ async function runTest() {
         });
 
         console.log('Initializing database with sources (file paths resolved):', JSON.stringify(localFileSources, null, 2));
-        const db = await initializeDatabase(localFileSources);
+        // Pass the dummyProgressCallback to initializeDatabase (which is initializeDataSources)
+        const db = await initializeDatabase(localFileSources, dummyProgressCallback);
 
         if (!db) {
             throw new Error('Database initialization returned undefined or null.');
