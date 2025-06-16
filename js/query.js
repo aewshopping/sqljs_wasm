@@ -1,5 +1,11 @@
-import { db } from './db.js';
+// import { db } from './db.js'; // Removed: db instance will be injected
 import { displayResults, displayQueryError, clearResults } from './ui/resultsDisplay.js';
+
+let dbInstance = null; // Module-scoped database instance
+
+export function setDbInstance(instance) {
+    dbInstance = instance;
+}
 
 export function processQueryResult(stmtResult) {
     if (!stmtResult || stmtResult.length === 0) {
@@ -66,15 +72,16 @@ function executeQuery() {
     const sqlInput = document.getElementById('sql-input');
     clearResults();
 
-    if (!db) {
-        displayQueryError('Database not initialized yet. Please wait.');
+    if (!dbInstance) {
+        console.error('Database instance not set in query.js. Call setDbInstance first.');
+        displayQueryError('Database not initialized yet or not set for querying. Please wait or refresh.');
         return;
     }
 
     const query = sqlInput.value;
 
     try {
-        const stmtResult = db.exec(query); // This is an array of result objects
+        const stmtResult = dbInstance.exec(query); // This is an array of result objects
         const processedResult = processQueryResult(stmtResult);
 
         if (processedResult.multipleMessages) {
