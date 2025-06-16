@@ -1,3 +1,5 @@
+const copyButtonHTML = '<button id="copy-button" class="copy-button">Copy</button>';
+
 /**
  * Displays query results in the results area.
  * @param {Array<Object>|Object} resultsArray - The array of result objects or a single object indicating no results/message.
@@ -8,7 +10,7 @@ function displayResults(resultsArray) {
         console.error("Results display element not found.");
         return;
     }
-    resultsDiv.innerHTML = ''; // Clear previous results
+    // resultsDiv.innerHTML = ''; // Clear previous results - now handled by prepending copyButtonHTML
 
     // Check for specific message objects or empty arrays
     if (!resultsArray || resultsArray.length === 0 ||
@@ -23,7 +25,7 @@ function displayResults(resultsArray) {
             // Handle case where it's an array of message objects (as produced by current query.js)
             message = resultsArray.map(r => r.message || JSON.stringify(r)).join('<br>');
         }
-        resultsDiv.innerHTML = `<p>${message}</p>`;
+        resultsDiv.innerHTML = `${copyButtonHTML}<p>${message}</p>`;
         return;
     }
 
@@ -32,7 +34,7 @@ function displayResults(resultsArray) {
     // or it's the direct array of row objects.
     // The current query.js wraps this in an outer array: allResultsJson = stmtResult.map(...)
     // So, resultsArray here is expected to be that allResultsJson.
-    resultsDiv.innerHTML = `
+    resultsDiv.innerHTML = `${copyButtonHTML}
         <h3>Raw JSON Output:</h3>
         <pre>${JSON.stringify(resultsArray, null, 2)}</pre>
     `;
@@ -48,7 +50,7 @@ function displayQueryError(errorMessage) {
         console.error("Results display element not found.");
         return;
     }
-    resultsDiv.innerHTML = `<p class="error">SQL Error: ${errorMessage}</p>`;
+    resultsDiv.innerHTML = `${copyButtonHTML}<p class="error">SQL Error: ${errorMessage}</p>`;
 }
 
 /**
@@ -60,7 +62,7 @@ function clearResults() {
         console.error("Results display element not found.");
         return;
     }
-    resultsDiv.innerHTML = '';
+    resultsDiv.innerHTML = copyButtonHTML;
 }
 
 export { displayResults, displayQueryError, clearResults };

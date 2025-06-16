@@ -1,6 +1,7 @@
 import { initializeDatabase, generateTableNameFromUrl } from './db.js';
 import { executeQuery } from './query.js';
 import { fileSources } from './csvSources.js'; // Import the updated sources
+import { initializeCopyButton } from './ui/copyButton.js';
 
 const executeButton = document.getElementById('execute-button');
 
@@ -10,6 +11,8 @@ if (executeButton) {
 } else {
     console.error("Execute button not found.");
 }
+
+initializeCopyButton(); // Initialize the copy button functionality
 
 // Initialize the database with the imported array of sources and then execute an initial query.
 initializeDatabase(fileSources) // Use the updated fileSources

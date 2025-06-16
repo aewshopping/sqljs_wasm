@@ -25,6 +25,7 @@ h1, h2 {
     overflow-y: auto;
 }
 #results {
+    position: relative;
     margin-top: 20px;
     background-color: #f8faff;
     padding: 15px;
@@ -72,4 +73,16 @@ button:hover {
 .error {
     color: #dc3545;
     font-weight: bold;
+}
+#copy-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    padding: 3px 8px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 10; /* To ensure it's above the <pre> tag */
 }
