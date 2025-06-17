@@ -2,6 +2,7 @@ import { initializeDatabase, generateTableNameFromUrl } from './db.js';
 import { executeQuery } from './query.js';
 import { fileSources } from './csvSources.js'; // Import the updated sources
 import { initializeCopyButton } from './ui/copyButton.js';
+import { startTimer, stopTimer, displayTime } from './ui/timer.js';
 
 const executeButton = document.getElementById('execute-button');
 
@@ -14,6 +15,7 @@ if (executeButton) {
 
 initializeCopyButton(); // Initialize the copy button functionality
 
+startTimer();
 // Initialize the database with the imported array of sources and then execute an initial query.
 initializeDatabase(fileSources) // Use the updated fileSources
     .then(() => {
@@ -37,6 +39,8 @@ initializeDatabase(fileSources) // Use the updated fileSources
         }
         console.log("Database initialized. Executing initial query...");
         executeQuery(); // Execute initial query to display data
+        stopTimer();
+        displayTime();
     })
     .catch(error => {
         console.error("Failed to initialize the application:", error);
@@ -44,4 +48,6 @@ initializeDatabase(fileSources) // Use the updated fileSources
         if (statusDiv) {
             statusDiv.innerHTML = `<p class="error">Application initialization failed: ${error.message}</p>`;
         }
+        stopTimer();
+        displayTime();
     });
