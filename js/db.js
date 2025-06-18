@@ -6,26 +6,57 @@ import { addTableToList, clearTableList } from './ui/tableListDisplay.js';
 let db = null;
 
 /**
- * Generates a sanitized table name from a URL.
- * @param {string} url - The URL to generate a table name from.
+ * Sanitizes a given string to be a valid SQL table name.
+ * @param {string} name - The proposed table name.
  * @returns {string} The sanitized table name.
  */
-function generateTableNameFromUrl(url) {
-    // Extract filename from URL
-    let filename = url.substring(url.lastIndexOf('/') + 1);
-
-    // Remove file extension
-    filename = filename.replace(/\.[^/.]+$/, "");
-
+function sanitizeTableName(name) {
     // Replace non-alphanumeric characters (except underscores) with underscores
-    filename = filename.replace(/[^a-zA-Z0-9_]/g, '_');
+    let sanitizedName = name.replace(/[^a-zA-Z0-9_]/g, '_');
 
-    // Ensure the name starts with a letter or underscore
-    if (/^[0-9]/.test(filename)) {
-        filename = "table_" + filename;
+    // Condense multiple underscores into one
+    sanitizedName = sanitizedName.replace(/_+/g, '_');
+
+    // Remove leading/trailing underscores that might have resulted from original leading/trailing special chars
+    // or from the multiple underscore condensation. But don't remove if it's the *only* character.
+    if (sanitizedName.length > 1) {
+        sanitizedName = sanitizedName.replace(/^_+|_+$/g, '');
     }
 
-    return filename;
+    // If, after all this, the name is empty or just an underscore (which might happen if original was all special chars)
+    // or if it became empty after stripping leading/trailing underscores, treat as invalid.
+    if (!sanitizedName || sanitizedName === '_') {
+        return "default_table_name"; // Fallback for completely invalid or purely special char names
+    }
+
+    // Ensure the name starts with a letter or underscore (if not already handled by above)
+    if (/^[0-9]/.test(sanitizedName)) {
+        sanitizedName = "table_" + sanitizedName;
+    }
+
+    // Final check for empty or underscore-only name after potential prefixing (e.g. if name was "1")
+    if (!sanitizedName || sanitizedName === '_' || sanitizedName === 'table_') {
+        return "default_table_name";
+    }
+
+    return sanitizedName;
+}
+
+/**
+ * Generates a sanitized table name from a URL or uses a custom name if provided.
+ * @param {string} url - The URL to generate a table name from (used as fallback).
+ * @param {string} [customTableName] - An optional custom table name.
+ * @returns {string} The sanitized table name.
+ */
+function generateTableNameFromUrl(url, customTableName) {
+    if (customTableName && typeof customTableName === 'string' && customTableName.trim() !== '') {
+        return sanitizeTableName(customTableName.trim());
+    }
+
+    // Fallback to URL-based generation
+    let filename = url.substring(url.lastIndexOf('/') + 1);
+    filename = filename.replace(/\.[^/.]+$/, ""); // Remove file extension
+    return sanitizeTableName(filename);
 }
 
 /**
@@ -119,7 +150,7 @@ async function initializeDatabase(sources) { // Parameter changed
                     continue;
                 }
 
-                const tableName = generateTableNameFromUrl(source.url);
+                const tableName = generateTableNameFromUrl(source.url, source.tableName); // Pass custom table name if available
                 await createTable(db, tableName, currentHeaders);
                 await insertData(db, tableName, currentHeaders, dataRows);
                 addTableToList(tableName); // Add table name to UI list

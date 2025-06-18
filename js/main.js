@@ -25,12 +25,14 @@ initializeDatabase(fileSources) // Use the updated fileSources
             if (fileSources && fileSources.length > 0) {
                 const firstFileSource = fileSources[0];
                 if (firstFileSource && firstFileSource.url) {
-                    let firstTableName = generateTableNameFromUrl(firstFileSource.url);
-                    console.log(`First table name determined: ${firstTableName}`);
+                    // Use generateTableNameFromUrl, passing the custom name if available.
+                    // The db.js version of generateTableNameFromUrl now handles sanitization and fallback.
+                    let firstTableName = generateTableNameFromUrl(firstFileSource.url, firstFileSource.tableName);
+                    console.log(`First table name for initial query: ${firstTableName}`);
 
                     const sqlInput = document.getElementById('sql-input');
                     if (firstTableName && sqlInput) {
-                        sqlInput.value = `SELECT * FROM ${firstTableName} LIMIT 5;`;
+                        sqlInput.value = `SELECT * FROM "${firstTableName}" LIMIT 5;`; // Enclose in double quotes
                     }
                 }
             }
