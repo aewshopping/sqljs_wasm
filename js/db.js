@@ -64,11 +64,28 @@ function generateTableNameFromUrl(url, customTableName) {
  * @param {SQL.Database} dbInstance - The initialized SQL.js database instance.
  * @param {string} tableName - The name of the table to create.
  * @param {string[]} headers - Array of header strings for table columns.
+ * @param {Array<{ "column-name": string, "column-type": string }>} [columnTypes] - Optional array of column type specifications.
  */
-function createTable(dbInstance, tableName, headers) {
-    const createTableSql = `CREATE TABLE "${tableName}" (${headers.map(h => `"${h}" TEXT`).join(', ')});`;
+function createTable(dbInstance, tableName, headers, columnTypes = []) {
+    const columnTypeMap = new Map(columnTypes.map(ct => [ct['column-name'], ct['column-type']]));
+    const headerSet = new Set(headers);
+
+    // Warn about column types specified for non-existent columns
+    columnTypeMap.forEach((type, columnName) => {
+        if (!headerSet.has(columnName)) {
+            console.warn(`Warning: Column "${columnName}" specified in columnTypes for table "${tableName}" does not exist in the CSV headers. This type definition will be ignored.`);
+        }
+    });
+
+    const columnDefinitions = headers.map(h => {
+        const type = columnTypeMap.get(h);
+        // SQLite is flexible with type names. If a type is specified, use it. Otherwise, default to TEXT.
+        return `"${h}" ${type ? type.toUpperCase() : 'TEXT'}`;
+    }).join(', ');
+
+    const createTableSql = `CREATE TABLE "${tableName}" (${columnDefinitions});`;
     dbInstance.run(createTableSql);
-    updateStatus(`Table "${tableName}" created with headers: ${headers.join(', ')}.`, false, true);
+    updateStatus(`Table "${tableName}" created with schema: (${columnDefinitions}).`, false, true);
 }
 
 /**
@@ -151,7 +168,7 @@ async function initializeDatabase(sources) { // Parameter changed
                 }
 
                 const tableName = generateTableNameFromUrl(source.url, source.tableName); // Pass custom table name if available
-                await createTable(db, tableName, currentHeaders);
+                await createTable(db, tableName, currentHeaders, source.columnTypes); // Pass columnTypes
                 await insertData(db, tableName, currentHeaders, dataRows);
                 addTableToList(tableName); // Add table name to UI list
                 updateStatus(`Data from ${source.url} loaded into table "${tableName}".`, false, true);

@@ -10,7 +10,10 @@ const fileSources = [
     {
         url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/popular-history-books.csv',
         type: 'csv',
-        tableName: 'books'
+        tableName: 'books',
+        columnTypes: [
+            { "column-name": "pages", "column-type": "integer" }
+        ]
     },
     {
         url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/tags.csv',
