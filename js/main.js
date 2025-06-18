@@ -1,16 +1,46 @@
-import { initializeDatabase, generateTableNameFromUrl } from './db.js';
+import { initializeDatabase, generateTableNameFromUrl, db } from './db.js'; // Import db
 import { executeQuery } from './query.js';
 import { fileSources } from './csvSources.js'; // Import the updated sources
 import { initializeCopyButton } from './ui/copyButton.js';
 import { startTimer, stopTimer, displayTime } from './ui/timer.js';
 
 const executeButton = document.getElementById('execute-button');
+const downloadDbButton = document.getElementById('download-db-button'); // Get the download button
 
 // Attach event listener to the execute button.
 if (executeButton) {
     executeButton.addEventListener('click', executeQuery);
 } else {
     console.error("Execute button not found.");
+}
+
+// Attach event listener to the download database button
+if (downloadDbButton) {
+    downloadDbButton.addEventListener('click', () => {
+        if (db) {
+            try {
+                const data = db.export();
+                const blob = new Blob([data], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'database.db'; // Set the desired filename
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log("Database download initiated.");
+            } catch (e) {
+                console.error("Error exporting database:", e);
+                alert("Error exporting database. See console for details.");
+            }
+        } else {
+            console.error("Database not initialized. Cannot download.");
+            alert("Database not yet initialized. Please wait or try reloading.");
+        }
+    });
+} else {
+    console.error("Download DB button not found.");
 }
 
 initializeCopyButton(); // Initialize the copy button functionality
