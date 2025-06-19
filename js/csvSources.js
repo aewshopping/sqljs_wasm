@@ -1,23 +1,23 @@
 const fileSources = [
     {
-        url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/books-tags.csv',
+        url: 'https://raw.githubusercontent.com/aewshopping/history-books-lite/refs/heads/main/data/books-tags.csv',
         type: 'csv'
     },
     {
-        url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/cats.csv',
+        url: 'https://raw.githubusercontent.com/aewshopping/history-books-lite/refs/heads/main/data/cats.csv',
         type: 'csv'
     },
     {
-        url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/popular-history-books.csv',
-        type: 'csv',
+        url: 'https://raw.githubusercontent.com/aewshopping/history-books-lite/refs/heads/main/data/books.tsv',
+        type: 'tsv',
         tableName: 'books'
     },
     {
-        url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_csv/tags.csv',
+        url: 'https://raw.githubusercontent.com/aewshopping/history-books-lite/refs/heads/main/data/tags.csv',
         type: 'csv'
     },
     {
-        url: 'https://raw.githubusercontent.com/aewshopping/history_books/refs/heads/main/data_tsv/quotes.tsv',
+        url: 'https://raw.githubusercontent.com/aewshopping/history-books-lite/refs/heads/main/data/quotes.tsv',
         type: 'tsv'
     }
 ];
