@@ -1,11 +1,11 @@
-import { initializeDatabase, generateTableNameFromUrl, db } from './db.js'; // Import db
+import { initializeDatabase, db } from './db.js'; // Import db, removed generateTableNameFromUrl as it's no longer used here
 import { executeQuery } from './query.js';
-import { fileSources } from './csvSources.js'; // Import the updated sources
+// import { fileSources } from './csvSources.js'; // Removed: No longer loading from CSV sources defined here
 import { initializeCopyButton } from './ui/copyButton.js';
 import { startTimer, stopTimer, displayTime } from './ui/timer.js';
 
 const executeButton = document.getElementById('execute-button');
-const downloadDbButton = document.getElementById('download-db-button'); // Get the download button
+const downloadDbButton = document.getElementById('download-db-button');
 
 // Attach event listener to the execute button.
 if (executeButton) {
@@ -24,7 +24,7 @@ if (downloadDbButton) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'database.db'; // Set the desired filename
+                a.download = 'database.db';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -43,34 +43,40 @@ if (downloadDbButton) {
     console.error("Download DB button not found.");
 }
 
-initializeCopyButton(); // Initialize the copy button functionality
+initializeCopyButton();
 
 startTimer();
-// Initialize the database with the imported array of sources and then execute an initial query.
-initializeDatabase(fileSources) // Use the updated fileSources
-    .then(() => {
-        // Database is initialized (or attempted to initialize with data from URLs), and db instance in db.js is set.
-        // executeQuery (imported from query.js) will use that db instance.
-        try {
-            if (fileSources && fileSources.length > 0) {
-                const firstFileSource = fileSources[0];
-                if (firstFileSource && firstFileSource.url) {
-                    // Use generateTableNameFromUrl, passing the custom name if available.
-                    // The db.js version of generateTableNameFromUrl now handles sanitization and fallback.
-                    let firstTableName = generateTableNameFromUrl(firstFileSource.url, firstFileSource.tableName);
-                    console.log(`First table name for initial query: ${firstTableName}`);
 
-                    const sqlInput = document.getElementById('sql-input');
-                    if (firstTableName && sqlInput) {
-                        sqlInput.value = `SELECT * FROM "${firstTableName}" LIMIT 5;`; // Enclose in double quotes
-                    }
+const dbUrl = "https://github.com/aewshopping/history-books-lite/raw/refs/heads/main/data.db";
+
+initializeDatabase(dbUrl)
+    .then(() => {
+        // Database is initialized from the .db URL.
+        // Set an initial query.
+        try {
+            const sqlInput = document.getElementById('sql-input');
+            if (db && sqlInput) {
+                // Attempt to get the first table name from the loaded database
+                const tablesResult = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' LIMIT 1;");
+                if (tablesResult.length > 0 && tablesResult[0].values && tablesResult[0].values.length > 0) {
+                    const firstTableName = tablesResult[0].values[0][0];
+                    sqlInput.value = `SELECT * FROM "${firstTableName}" LIMIT 5;`;
+                    console.log(`Initial query set for table: ${firstTableName}`);
+                } else {
+                    // Fallback if no tables are found or db structure is unexpected
+                    sqlInput.value = `SELECT 'No tables found or unable to determine first table.' AS Info;`;
+                    console.warn("No tables found in the database to set an initial query, or db is not as expected.");
                 }
             }
         } catch (error) {
             console.error(`Could not dynamically set initial query: ${error.message}`);
+            const sqlInput = document.getElementById('sql-input');
+            if (sqlInput) {
+                sqlInput.value = `SELECT 'Error setting initial query.' AS Error;`;
+            }
         }
-        console.log("Database initialized. Executing initial query...");
-        executeQuery(); // Execute initial query to display data
+        console.log("Database initialized. Executing initial query (if set)...");
+        executeQuery(); // Execute initial query
         stopTimer();
         displayTime();
     })
